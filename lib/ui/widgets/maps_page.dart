@@ -18,6 +18,7 @@ class MapScreen extends StatefulWidget {
 
 class _MapScreenState extends State<MapScreen> {
   LatLng? myPosition;
+  LatLng? selectedPosition;
   LatLng? fixedPosition;
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -81,6 +82,27 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
+  void handleMapTap(LatLng tappedPoint) {
+    setState(() {
+      selectedPosition = tappedPoint;
+    });
+
+    // Calcula la distancia entre las dos ubicaciones
+    if (myPosition != null && selectedPosition != null) {
+      double distance = Geolocator.distanceBetween(
+        myPosition!.latitude,
+        myPosition!.longitude,
+        selectedPosition!.latitude,
+        selectedPosition!.longitude,
+      );
+
+      print('Distancia: $distance metros');
+    }
+
+    // Guarda la ubicación seleccionada en la base de datos
+    fixLocation(selectedPosition!);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -100,52 +122,85 @@ class _MapScreenState extends State<MapScreen> {
       ),
       body: myPosition == null
           ? const CircularProgressIndicator()
-          : FlutterMap(
-              options: MapOptions(
-                center: myPosition,
-                minZoom: 5,
-                maxZoom: 25,
-                zoom: 18,
-              ),
-              nonRotatedChildren: [
-                TileLayer(
-                  urlTemplate:
-                      'https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token={accessToken}',
-                  additionalOptions: const {
-                    'accessToken': MAPBOX_ACCESS_TOKEN,
-                    'id': 'mapbox/streets-v12',
-                  },
+          : GestureDetector(
+              onTap: () {
+                // Convierte el punto de toque a coordenadas geográficas
+                final RenderBox overlay = Overlay.of(context)!.context.findRenderObject() as RenderBox;
+                final TapDownDetails details = TapDownDetails(
+                  globalPosition: overlay.globalToLocal(Offset.zero),
+                  localPosition: const Offset(0, 0),
+                );
+                final Offset localPosition = details.localPosition;
+
+                // Convierte las coordenadas locales a coordenadas geográficas
+                LatLng tappedPoint = LatLng(
+                  myPosition!.latitude + localPosition.dy,
+                  myPosition!.longitude + localPosition.dx,
+                );
+
+                // Maneja el toque en el mapa
+                handleMapTap(tappedPoint);
+              },
+              child: FlutterMap(
+                options: MapOptions(
+                  center: myPosition,
+                  minZoom: 5,
+                  maxZoom: 25,
+                  zoom: 18,
                 ),
-                MarkerLayer(
-                  markers: [
-                    Marker(
-                      point: myPosition!,
-                      builder: (context) {
-                        return Container(
-                          child: const Icon(
-                            Icons.person_pin,
-                            color: Colors.blueAccent,
-                            size: 40,
-                          ),
-                        );
-                      },
-                    ),
-                    if (fixedPosition != null)
+                layers: [
+                  TileLayerOptions(
+                    urlTemplate:
+                        'https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token={accessToken}',
+                    additionalOptions: const {
+                      'accessToken': MAPBOX_ACCESS_TOKEN,
+                      'id': 'mapbox/streets-v12',
+                    },
+                  ),
+                  MarkerLayerOptions(
+                    markers: [
                       Marker(
-                        point: fixedPosition!,
+                        point: myPosition!,
                         builder: (context) {
                           return Container(
                             child: const Icon(
-                              Icons.location_on,
-                              color: Colors.red,
+                              Icons.person_pin,
+                              color: Colors.blueAccent,
                               size: 40,
                             ),
                           );
                         },
                       ),
-                  ],
-                )
-              ],
+                      if (fixedPosition != null)
+                        Marker(
+                          point: fixedPosition!,
+                          builder: (context) {
+                            return Container(
+                              child: const Icon(
+                                Icons.location_on,
+                                color: Colors.red,
+                                size: 40,
+                              ),
+                            );
+                          },
+                        ),
+                      if (selectedPosition != null)
+                        Marker(
+                          point: selectedPosition!,
+                          builder: (context) {
+                            return Container(
+                              child: const Icon(
+                                Icons.place,
+                                color: Colors.green,
+                                size: 40,
+                              ),
+                            );
+                          },
+                        ),
+                    ],
+                  ),
+                ],
+              ),
             ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
