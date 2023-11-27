@@ -70,7 +70,7 @@ class _UserListPageState extends State<UserListPage> {
 
   // Método para iniciar el chat con un usuario específico
   void _startChatWithUser(AppUser user) {
-    Get.to(() => ChatPage());
+     Get.to(() => ChatSPage(), arguments: [ user]);
 }
   }
 
