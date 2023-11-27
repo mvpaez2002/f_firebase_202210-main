@@ -97,6 +97,13 @@ class _MapScreenState extends State<MapScreen> {
       );
 
       print('Distancia: $distance metros');
+
+      // Muestra la distancia en la pantalla del usuario
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Distancia: $distance metros'),
+        ),
+      );
     }
 
     // Guarda la ubicación seleccionada en la base de datos
@@ -145,7 +152,7 @@ class _MapScreenState extends State<MapScreen> {
                 options: MapOptions(
                   center: myPosition,
                   minZoom: 5,
-                  maxZoom: 25,
+                                    maxZoom: 25,
                   zoom: 18,
                 ),
                 layers: [
@@ -236,3 +243,4 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 }
+
